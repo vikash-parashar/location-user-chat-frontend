@@ -45,6 +45,10 @@ const extractMessages = (payload: unknown): any[] => {
       return value;
     }
   }
+  const nestedData = (payload as Record<string, unknown>)['data'];
+  if (nestedData && typeof nestedData === 'object' && !Array.isArray(nestedData)) {
+    return extractMessages(nestedData);
+  }
   return [];
 };
 
@@ -62,7 +66,6 @@ const formatMessageTimestamp = (value?: string) => {
 export default function Home() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [log, setLog] = useState<Log>(defaultLog);
-  const [messages, setMessages] = useState<any[]>([]);
 
   const headers = useMemo(() => {
     const token = settings.authToken.trim();
@@ -173,8 +176,7 @@ export default function Home() {
       private_only: data.get('private_only') ? 'true' : undefined,
     };
     try {
-      const payload = await apiRequest({ method: 'GET', path: '/location-users-chat/messages', query });
-      setMessages(extractMessages(payload));
+      await apiRequest({ method: 'GET', path: '/location-users-chat/messages', query });
     } catch (error) {
       handleError('GET /location-users-chat/messages', error);
     }
@@ -262,6 +264,13 @@ export default function Home() {
     const parsed = new Date(log.timestamp);
     return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleString('en-US');
   }, [log.timestamp]);
+
+  const messageResults = useMemo(() => {
+    if (!log.action.startsWith('GET /location-users-chat/messages')) {
+      return [];
+    }
+    return extractMessages(log.payload);
+  }, [log.action, log.payload]);
 
   return (
     <div className={styles.page}>
@@ -433,18 +442,20 @@ export default function Home() {
 
         <section className={styles.card}>
           <h2>Messages</h2>
-          {messages.length === 0 ? (
+          {messageResults.length === 0 ? (
             <p className={styles.helper}>
               Fetch messages with the form above to browse what the API returned; the response console still logs every payload.
             </p>
           ) : (
             <div className={styles.messageList}>
-              {messages.map((message, index) => {
+              {messageResults.map((message, index) => {
                 const author =
                   message?.sender_user_id ?? message?.user_id ?? message?.participant_user_id ?? 'system';
                 const timestamp = formatMessageTimestamp(
                   message?.created_at ?? message?.timestamp ?? message?.sent_at
                 );
+                const locationLabel = message?.location_id ?? '—';
+                const practiceLabel = message?.practice_id ?? '—';
                 const content =
                   typeof message === 'string'
                     ? message
@@ -463,6 +474,10 @@ export default function Home() {
                     <div className={styles.messageMeta}>
                       <span>{author}</span>
                       <span>{timestamp}</span>
+                    </div>
+                    <div className={styles.messageMeta}>
+                      <span>Location: {locationLabel}</span>
+                      <span>Practice: {practiceLabel}</span>
                     </div>
                     <p className={styles.messageBody}>{content}</p>
                   </article>
