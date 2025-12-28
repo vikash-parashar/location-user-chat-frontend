@@ -13,7 +13,7 @@ type Log = {
 const defaultLog: Log = {
   action: 'idle',
   status: 'idle',
-  timestamp: new Date().toISOString(),
+  timestamp: '',
   payload: 'Awaiting commands...',
 };
 
@@ -31,9 +31,38 @@ type ApiRequestOptions = {
   body?: Record<string, unknown>;
 };
 
+const extractMessages = (payload: unknown): any[] => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (!payload || typeof payload !== 'object') {
+    return [];
+  }
+  const candidateKeys = ['messages', 'data', 'results'];
+  for (const key of candidateKeys) {
+    const value = (payload as Record<string, unknown>)[key];
+    if (Array.isArray(value)) {
+      return value;
+    }
+  }
+  return [];
+};
+
+const formatMessageTimestamp = (value?: string) => {
+  if (!value) {
+    return '—';
+  }
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return value;
+  }
+  return new Date(parsed).toLocaleString('en-US');
+};
+
 export default function Home() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [log, setLog] = useState<Log>(defaultLog);
+  const [messages, setMessages] = useState<any[]>([]);
 
   const headers = useMemo(() => {
     const token = settings.authToken.trim();
@@ -144,7 +173,8 @@ export default function Home() {
       private_only: data.get('private_only') ? 'true' : undefined,
     };
     try {
-      await apiRequest({ method: 'GET', path: '/location-users-chat/messages', query });
+      const payload = await apiRequest({ method: 'GET', path: '/location-users-chat/messages', query });
+      setMessages(extractMessages(payload));
     } catch (error) {
       handleError('GET /location-users-chat/messages', error);
     }
@@ -225,10 +255,13 @@ export default function Home() {
     }
   };
 
-  const formattedTimestamp = useMemo(
-    () => new Date(log.timestamp).toLocaleString('en-US'),
-    [log.timestamp]
-  );
+  const formattedTimestamp = useMemo(() => {
+    if (!log.timestamp) {
+      return '—';
+    }
+    const parsed = new Date(log.timestamp);
+    return Number.isNaN(parsed.getTime()) ? '—' : parsed.toLocaleString('en-US');
+  }, [log.timestamp]);
 
   return (
     <div className={styles.page}>
@@ -396,6 +429,47 @@ export default function Home() {
               <button type="submit">List users</button>
             </form>
           </div>
+        </section>
+
+        <section className={styles.card}>
+          <h2>Messages</h2>
+          {messages.length === 0 ? (
+            <p className={styles.helper}>
+              Fetch messages with the form above to browse what the API returned; the response console still logs every payload.
+            </p>
+          ) : (
+            <div className={styles.messageList}>
+              {messages.map((message, index) => {
+                const author =
+                  message?.sender_user_id ?? message?.user_id ?? message?.participant_user_id ?? 'system';
+                const timestamp = formatMessageTimestamp(
+                  message?.created_at ?? message?.timestamp ?? message?.sent_at
+                );
+                const content =
+                  typeof message === 'string'
+                    ? message
+                    : message?.message ??
+                      message?.body ??
+                      (typeof message?.payload === 'string'
+                        ? message.payload
+                        : message?.payload
+                        ? JSON.stringify(message.payload)
+                        : JSON.stringify(message));
+                return (
+                  <article
+                    className={styles.messageItem}
+                    key={message?.id ?? message?.uuid ?? index}
+                  >
+                    <div className={styles.messageMeta}>
+                      <span>{author}</span>
+                      <span>{timestamp}</span>
+                    </div>
+                    <p className={styles.messageBody}>{content}</p>
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         <section className={styles.card}>
