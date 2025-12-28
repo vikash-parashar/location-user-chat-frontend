@@ -18,7 +18,7 @@ const defaultLog: Log = {
 };
 
 const defaultSettings = {
-  apiBase: 'http://localhost:8080',
+  apiBase: 'http://localhost:8000',
   authToken: '',
 };
 
@@ -247,7 +247,7 @@ export default function Home() {
           <form className={styles.formGrid} onChange={handleSettingsChange}>
             <label className={styles.label}>
               API base URL
-              <input name="apiBase" type="url" defaultValue={settings.apiBase} placeholder="http://localhost:8080" />
+              <input name="apiBase" type="url" defaultValue={settings.apiBase} placeholder="http://localhost:8000" />
             </label>
             <label className={styles.label}>
               Authorization

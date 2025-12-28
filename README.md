@@ -8,7 +8,7 @@ This repository holds the Go backend that exposes the `/location-users-chat/*` R
 ## Backend setup
 1. Ensure the new `location_user_chat_logs` migration has been applied to your PostgreSQL instance so the backend can persist logs from every chat action.
 2. Run `go test ./internal/service` or `go test ./...` inside this repo after the migration to make sure the chat services compile and log entries are recorded.
-3. Start the Go server (e.g., `go run ./cmd/server`) so the API is listening on `http://localhost:8080`.
+3. Start the Go server (e.g., `go run ./cmd/server`) so the API is listening on `http://localhost:8000`.
 
 ## Frontend integration
 1. Open a terminal and install dependencies inside the relocated front-end folder:
@@ -21,7 +21,7 @@ This repository holds the Go backend that exposes the `/location-users-chat/*` R
    npm run dev
    ```
    By default it will serve on `http://localhost:3000`.
-3. In the playground's **Connection settings** card, set the API base URL to your Go server (default `http://localhost:8080`) and provide a valid `Bearer` token for authentication.
+3. In the playground's **Connection settings** card, set the API base URL to your Go server (default `http://localhost:8000`) and provide a valid `Bearer` token for authentication.
 4. Use the various panels (send message, list messages, etc.) to call the Go backend. Every successful interaction will trigger the backend log helper, which writes to `location_user_chat_logs`.
 5. Inspect `location_user_chat_logs` to confirm metadata (actor, action, details) is being persisted for each API call.
 
